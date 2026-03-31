@@ -139,6 +139,12 @@ python screenstudio-export.py "My Recording.screenstudio" --software-encoder
 7. Composites the cursor at the correct screen position
 8. Encodes the final output via FFmpeg (hardware-accelerated on macOS)
 
+## Disclaimer
+
+This project is an independent tool that reads openly structured project files (plain JSON and standard MP4 video). It does not contain, reverse-engineer, or redistribute any Screen Studio source code, binaries, or proprietary assets.
+
+Screen Studio is an excellent product — if you use it regularly, please consider [supporting the developers](https://www.screen.studio/) with a subscription. This tool is intended for personal and educational use.
+
 ## Contributing
 
 The Screen Studio project format is fully open (plain JSON + standard video files). All config fields for unimplemented features are documented in the feature table above. PRs welcome!
