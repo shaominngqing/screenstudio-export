@@ -4,14 +4,80 @@ Export [Screen Studio](https://www.screen.studio/) recordings to MP4 — no subs
 
 Screen Studio saves recordings as open project files (JSON + fragmented MP4). The editing UI is free, but exporting requires a paid subscription. This tool reads the project data and renders the final video with all configured effects.
 
-## Supported Effects
+## Feature Status
 
-- **Zoom animations** — manual target, follow-mouse, follow-click-groups
-- **Speed changes** — per-segment time scaling (slow-mo to 24x fast-forward)
-- **Spring physics** — smooth animated transitions for viewport and cursor movement
-- **Cursor rendering** — original recorded cursors with hotspot alignment, scaled to output resolution
-- **Motion blur** — multi-frame blending during viewport transitions
-- **Multi-session** — handles recordings with any number of segments
+### Implemented
+
+| Feature | Status | Description |
+|---------|--------|-------------|
+| Zoom — manual | Done | Zoom to a fixed point with configurable `manualTargetPoint` (x, y) |
+| Zoom — follow-mouse | Done | Viewport follows cursor position with deadzone to reduce jitter |
+| Zoom — follow-click-groups | Done | Viewport follows the most recent click position |
+| Speed changes | Done | Per-slice `timeScale` from slow-mo to 24x fast-forward, with gap/cut support |
+| Spring physics (viewport) | Done | Smooth zoom/pan transitions using spring simulation (mass, stiffness, damping) |
+| Spring physics (cursor) | Done | Smooth cursor movement independent of raw mouse data |
+| Spring in output time | Done | Animations are not affected by speed changes — transitions stay smooth during fast-forward |
+| Cursor rendering | Done | Original recorded cursor images with hotspot alignment and configurable size multiplier |
+| Cursor auto-scaling | Done | Cursor size adapts to output resolution |
+| Motion blur | Done | Multi-frame blending during viewport transitions (configurable sub-frame count) |
+| Multi-session | Done | Handles recordings with any number of video segments |
+| Timeline mapping | Done | Accurate output-time to source-time mapping across slices and sessions |
+| Hardware encoding | Done | macOS VideoToolbox H.264 encoder with software (libx264) fallback |
+
+### Not Yet Implemented
+
+| Feature | Priority | Config Fields | Notes |
+|---------|----------|---------------|-------|
+| **Background canvas** | High | `backgroundType`, `backgroundGradient`, `backgroundImage`, `backgroundSystemName`, `backgroundBlur`, `backgroundColor` | When `backgroundPaddingRatio > 0`, video is inset on a gradient/wallpaper/image background |
+| **Background padding** | High | `backgroundPaddingRatio`, `insetPadding` (top/bottom/left/right), `insetColor`, `insetAlpha` | Controls the canvas area around the recording |
+| **Window rounded corners** | High | `windowBorderRadius` | Rounds the corners of the recording viewport |
+| **Window shadow** | Medium | `shadowIntensity`, `shadowAngle`, `shadowDistance`, `shadowBlur`, `shadowIsDirectional` | Drop shadow behind the recording window |
+| **Camera overlay** | Medium | `hideCamera`, `mirrorCamera`, `cameraRoundness`, `cameraSize`, `cameraPosition`, `cameraPositionPoint`, `cameraScaleDuringZoom`, `cameraAspectRatio` | Picture-in-picture webcam overlay; requires camera video channel in recording data |
+| **Audio — system** | Medium | `audioVolume`, `muteSystemAudio` | System audio track mixing |
+| **Audio — microphone** | Medium | `muteMicrophone`, `improveMicrophoneAudio`, `microphoneInStereoMode` | Microphone track mixing with optional enhancement |
+| **Audio — external device** | Low | `muteExternalDeviceAudio` | External device audio mixing |
+| **Audio — background music** | Low | `backgroundAudioFileName`, `muteBackgroundAudio`, `backgroundAudioVolume` | Background music file overlay |
+| **Audio — per-slice volume** | Low | slice `volume`, `systemAudioVolume`, `externalDeviceAudioVolume` | Independent volume control per time slice |
+| **Click sound effects** | Low | `clickSoundEffect`, `clickSoundEffectVolume` | Audio feedback on mouse clicks |
+| **Click visual effects** | Low | `clickEffect` | Ripple/highlight animation on click |
+| **Keyboard shortcut overlay** | Medium | `showShortcuts`, `hiddenShortcuts`, `showShortcutsWithSingleLetters`, `shortcutsSizeRatio` | Floating UI showing pressed key combinations |
+| **Transcript/captions** | Low | `showTranscript`, `transcriptSizeRatio` | Speech-to-text captions overlay |
+| **Device mockup frames** | Low | `deviceFrameKey`, `enableDeviceMockup`, `adjustDeviceFrameToRecordingSize` | MacBook/iPhone/iPad frame wrapping the recording; assets are inside Screen Studio's app bundle |
+| **Recording crop** | Low | `recordingCrop` (x, y, width, height normalized) | Crop a sub-region of the source recording |
+| **Glide animation** | Low | zoomRange `glideDirection`, `glideSpeed` | Slow panning movement within a zoom range |
+| **Instant zoom** | Low | zoomRange `hasInstantAnimation` | Skip spring animation for instant zoom cuts |
+| **Always keep zoomed** | Low | `alwaysKeepZoomedIn` | Prevent zoom-out between zoom ranges |
+| **Cursor auto-hide** | Low | `hideNotMovingCursorAfterMs` | Hide cursor after idle timeout |
+| **Cursor shake removal** | Low | `removeCurshorShakeTreshold` | Filter out small jittery cursor movements |
+| **Cursor loop** | Low | `loopCursorPositionBeforeEndMs` | Loop cursor position near the end of recording |
+| **Per-slice cursor hide** | Low | slice `hideCursor` | Hide cursor for specific time slices |
+| **Per-slice smooth toggle** | Low | slice `disableSmoothMouseMovement` | Disable cursor spring for specific slices |
+| **Layout system** | Low | `defaultLayout`, scene `layouts` | Multi-source layout arrangements |
+| **Masks** | Low | scene `masks` | Region masking/blurring |
+| **Snap to edges** | Low | zoomRange `snapToEdgesRatio` | Snap viewport to screen edges when close |
+| **Output aspect ratio** | Low | `defaultOutputAspectRatio` | Force a specific aspect ratio with letterboxing |
+
+### Project File Format Reference
+
+```
+MyRecording.screenstudio/
+  project.json            # Editing config: zoom ranges, speed slices, springs, cursor, background, etc.
+  meta.json               # Screen Studio version info
+  recording/
+    metadata.json          # Session boundaries, recorder types, display bounds
+    channel-1-display-0.mp4     # Video init segment (fragmented MP4, H.264)
+    channel-1-display-0-*.m4s   # Video media segments
+    channel-1-display-0.m3u8    # HLS playlist (not used by this tool)
+    channel-1-display-1.mp4     # Additional session video (if multi-session)
+    cursors.json           # Cursor type metadata: id, hotSpot {x,y}, standardSize {w,h}
+    cursors/               # Cursor PNG images (arrow.png, iBeam.png, pointingHand.png, ...)
+    mousemoves-0.json      # Mouse position events: {x, y, processTimeMs, cursorId}
+    mousemoves-1.json      # Mouse data for session 1 (if multi-session)
+    mouseclicks-0.json     # Click events: {x, y, processTimeMs, button, type: mouseDown/mouseUp}
+    keystrokes-0.json      # Key events: {character, activeModifiers, processTimeMs}
+    metadata-raw.json      # Raw recording metadata
+    polyrecorder.log       # Recording engine log
+```
 
 ## Requirements
 
@@ -64,25 +130,6 @@ python screenstudio-export.py "My Recording.screenstudio" --software-encoder
 
 ## How It Works
 
-Screen Studio's `.screenstudio` project directory contains:
-
-```
-MyRecording.screenstudio/
-  project.json          # All editing config: zoom ranges, speed slices, springs, cursor settings
-  meta.json             # Version info
-  recording/
-    metadata.json       # Session boundaries, recorder types
-    channel-1-display-0.mp4   # Video segment (fragmented MP4)
-    channel-1-display-0-*.m4s # Video fragments
-    channel-1-display-1.mp4   # Additional segments (if multi-session)
-    cursors.json        # Cursor metadata (hotspots, sizes)
-    cursors/            # Cursor PNG images
-    mousemoves-*.json   # Mouse position data
-    mouseclicks-*.json  # Mouse click data
-    keystrokes-*.json   # Keystroke data
-```
-
-The renderer:
 1. Parses `project.json` to extract zoom ranges, speed slices, and spring parameters
 2. Builds an output-time to source-time mapping from the slice definitions
 3. Simulates spring physics in **output time** (so animations aren't affected by speed changes)
@@ -92,19 +139,9 @@ The renderer:
 7. Composites the cursor at the correct screen position
 8. Encodes the final output via FFmpeg (hardware-accelerated on macOS)
 
-## Limitations
+## Contributing
 
-Effects not yet implemented:
-- Background canvas (gradient, wallpaper, padding)
-- Window rounded corners and shadows
-- Camera (webcam) picture-in-picture overlay
-- Device mockup frames (MacBook, iPhone, etc.)
-- Audio mixing (system audio, microphone, background music)
-- Keyboard shortcut overlay
-- Click effects (ripple animations)
-- Transcript/captions
-
-These features are fully described in the project JSON format, so contributions to support them are welcome.
+The Screen Studio project format is fully open (plain JSON + standard video files). All config fields for unimplemented features are documented in the feature table above. PRs welcome!
 
 ## License
 
