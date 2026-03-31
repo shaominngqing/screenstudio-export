@@ -23,7 +23,7 @@ Screen Studio saves recordings as open project files (JSON + fragmented MP4). Th
 ## Installation
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/screenstudio-export.git
+git clone https://github.com/shaominngqing/screenstudio-export.git
 cd screenstudio-export
 pip install -r requirements.txt
 ```
