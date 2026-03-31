@@ -1,5 +1,7 @@
 # screenstudio-export
 
+[中文文档](README_CN.md)
+
 Export [Screen Studio](https://www.screen.studio/) recordings to MP4 — no subscription required.
 
 Screen Studio saves recordings as open project files (JSON + fragmented MP4). The editing UI is free, but exporting requires a paid subscription. This tool reads the project data and renders the final video with all configured effects.
